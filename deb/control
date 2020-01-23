@@ -1,0 +1,9 @@
+Package: libnss-http
+Version: <PKG_VER>
+Section: base
+Priority: optional
+Architecture: amd64
+Depends: libjson0 (>= 0.10), libcurl3-nss (>= 7.26.0)
+Maintainer: <username@example.org>
+Description:
+    NSS plugin that uses an HTTP server as a backend
