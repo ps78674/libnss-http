@@ -1,11 +1,10 @@
-VERSION =$(shell cat VERSION | cut -d- -f1)
 INC_LIBJSON_PATH=json-c
 
 CC=gcc
 CFLAGS=-O2 -s -fPIC -std=gnu99 -I/usr/include/$(INC_LIBJSON_PATH)
 
 LD_SONAME=-Wl,-soname,libnss_http.so.2
-LIBRARY=libnss_http.so.$(VERSION)
+LIBRARY=libnss_http.so.2.0
 LINKS=libnss_http.so.2 libnss_http.so
 
 PREFIX=/usr
@@ -31,12 +30,10 @@ nss_http_services: nss_http-passwd nss_http-group nss_http-shadow
 
 nss_http: nss_http_build_dir nss_http_services
 	$(CC) $(CFLAGS) -c src/nss_http.c -o $(BUILD)/nss_http.o
-	$(CC) $(CFLAGS) -c src/nss_http-config.c -o $(BUILD)/nss_http-config.o
 
 	$(CC) -shared $(LD_SONAME) \
         -o $(BUILD)/$(LIBRARY) \
 		$(BUILD)/nss_http.o \
-		$(BUILD)/nss_http-config.o \
 		$(BUILD)/nss_http-passwd.o \
 		$(BUILD)/nss_http-group.o \
 		$(BUILD)/nss_http-shadow.o \

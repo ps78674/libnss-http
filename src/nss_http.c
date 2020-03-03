@@ -1,13 +1,83 @@
 #include "nss_http.h"
 
+#include <unistd.h>
+#include <netdb.h>
 #include <curl/curl.h>
 #include <string.h>
 #include <stdlib.h>
+
+struct config
+{
+   char httpserver[64];
+   char debug[5];
+   long timeout;
+};
 
 struct MemoryStruct {
   char *data;
   size_t size;
 };
+
+struct config conf;
+
+void debug_print(const char *func)
+{
+    if (strcmp("true", conf.debug) == 0)
+        fprintf(stderr, "NSS DEBUG: Called %s \n", func);
+}
+
+void readconfig(struct config *configstruct)
+{
+    FILE *f;
+    if ((f = fopen (CONFIG_FILE, "r")) == NULL)
+    {
+        fprintf(stderr, "error opening '%s'\n", CONFIG_FILE);
+        exit(1);
+    }
+
+    char line[MAX_CONFLINE_LEN];
+    while(fgets(line, sizeof(line), f) != NULL)
+    {
+        if(line[0] == '#') {
+            continue;
+        }
+
+        if ((sscanf(line, "HTTPSERVER=%s\n", configstruct->httpserver) != 0)
+            || (sscanf(line, "DEBUG=%s\n", configstruct->debug) != 0)
+            || (sscanf(line, "TIMEOUT=%ld\n", &configstruct->timeout) != 0))
+        {
+            continue;
+        }
+    }
+
+    fclose(f);
+}
+
+void getmyhostname(char *hostname)
+{
+    gethostname(hostname, MAX_HOSTNAME_LEN);
+
+    struct addrinfo hints={ .ai_family=AF_UNSPEC, .ai_flags=AI_CANONNAME };
+    struct addrinfo *res=NULL;
+    
+    if (getaddrinfo(hostname, NULL, &hints, &res) == 0) {
+        snprintf(hostname, MAX_HOSTNAME_LEN, "%s", res->ai_canonname);
+        freeaddrinfo(res);
+    }
+}
+
+void genurl(char* url, const char *type, const char *key)
+{
+    char hostname[MAX_HOSTNAME_LEN];
+    getmyhostname(hostname);
+
+    if (strlen(key) == 0){
+        snprintf(url, MAX_URL_LEN, "%s/%s?hostname=%s", conf.httpserver, type, hostname);
+    }
+    else if ( strlen(key) != 0){
+        snprintf(url, MAX_URL_LEN, "%s/%s?%s&hostname=%s", conf.httpserver, type, key, hostname);
+    }
+}
 
 static size_t write_response(void *ptr, size_t size, size_t nmemb, void *stream)
 {
@@ -19,12 +89,12 @@ static size_t write_response(void *ptr, size_t size, size_t nmemb, void *stream)
     if (realsize < NSS_HTTP_MAX_BUFFER_SIZE) {
         mem->data = realloc(mem->data, mem->size + realsize + 1);
         if (mem->data == NULL) {
-            /* out of memory! */
+            // out of memory
             fprintf(stderr, "not enough memory (realloc returned NULL)\n");
             return 0;
         }
     } else {
-        // Request data is too large.
+        // request data is too large
         fprintf(stderr, "request data is too large\n");
         return 0;
     }
@@ -42,20 +112,17 @@ char *nss_http_request(const char *url)
 
     CURL *curl = NULL;
     CURLcode result;
+
     long code;
     struct curl_slist *headers = NULL;
     struct MemoryStruct chunk = { .data = malloc(1), .size = 0 };
-    struct config conf;
-
-    readconfig(&conf);
 
     curl_global_init(CURL_GLOBAL_ALL);
     curl = curl_easy_init();
+    headers = curl_slist_append(headers, "User-Agent: NSS-HTTP");    
 
     curl_easy_setopt(curl, CURLOPT_URL, url);
     curl_easy_setopt(curl, CURLOPT_SSL_VERIFYPEER, 0);
-
-    headers = curl_slist_append(headers, "User-Agent: NSS-HTTP");
     curl_easy_setopt(curl, CURLOPT_HTTPHEADER, headers);
     curl_easy_setopt(curl, CURLOPT_CONNECTTIMEOUT, conf.timeout);
     curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, write_response);
@@ -76,4 +143,10 @@ char *nss_http_request(const char *url)
     curl_global_cleanup();
 
     return chunk.data;
+}
+
+__attribute__ ((constructor)) void _nss_init()
+{
+    memset(&conf, '\0', sizeof(conf));
+    readconfig(&conf);
 }
