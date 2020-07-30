@@ -1,0 +1,4 @@
+#!/usr/bin/env bash
+
+rm -f /lib/x86_64-linux-gnu/libnss_http.so.2
+rm -f /lib/x86_64-linux-gnu/libnss_http.so

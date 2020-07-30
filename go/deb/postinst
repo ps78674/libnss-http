@@ -1,0 +1,4 @@
+#!/usr/bin/env bash
+
+ln -sf libnss_http.so.<PKG_VER> /lib/x86_64-linux-gnu/libnss_http.so.2
+ln -sf libnss_http.so.2 /lib/x86_64-linux-gnu/libnss_http.so
