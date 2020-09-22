@@ -1,7 +1,7 @@
 INC_LIBJSON_PATH=json-c
 
 CC=gcc
-CFLAGS=-O2 -s -fPIC -std=gnu99 -I/usr/include/$(INC_LIBJSON_PATH)
+CFLAGS=-Wall -O2 -s -fPIC -std=gnu99 -I/usr/include/$(INC_LIBJSON_PATH)
 
 LD_SONAME=-Wl,-soname,libnss_http.so.2
 LIBRARY=libnss_http.so.2.0
