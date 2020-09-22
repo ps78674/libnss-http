@@ -2,7 +2,6 @@
 
 #include <stdio.h>
 #include <errno.h>
-#include <pthread.h>
 #include <nss.h>
 #include <shadow.h>
 #include <string.h>
@@ -11,14 +10,12 @@
 // #include <json-c/json.h>
 #include <json.h>
 
-static pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
 static json_object *ent_json_root = NULL;
 static int ent_json_idx = 0;
 
 // -1 Failed to parse
 // -2 Buffer too small
-static int
-pack_shadow_struct(json_object *root, struct spwd *result, char *buffer, size_t buflen)
+static int pack_shadow_struct(json_object *root, struct spwd *result, char *buffer, size_t buflen)
 {
     DEBUG_LOG;
 
@@ -59,13 +56,13 @@ pack_shadow_struct(json_object *root, struct spwd *result, char *buffer, size_t 
 
     memset(buffer, '\0', buflen);
 
-    if ((bufleft <= json_object_get_string_len(j_sp_namp)) ||
+    if (((int)bufleft <= json_object_get_string_len(j_sp_namp)) ||
        (snprintf(next_buf, bufleft, "%s", json_object_get_string(j_sp_namp)) <= 0)) return -2;
     result->sp_namp = next_buf;
     next_buf += strlen(result->sp_namp) + 1;
     bufleft  -= strlen(result->sp_namp) + 1;
 
-    if ((bufleft <= json_object_get_string_len(j_sp_pwdp)) ||
+    if (((int)bufleft <= json_object_get_string_len(j_sp_pwdp)) ||
        (snprintf(next_buf, bufleft, "%s", json_object_get_string(j_sp_pwdp)) <= 0)) return -2;
     result->sp_pwdp = next_buf;
     next_buf += strlen(result->sp_pwdp) + 1;
@@ -88,8 +85,8 @@ pack_shadow_struct(json_object *root, struct spwd *result, char *buffer, size_t 
     return 0;
 }
 
-enum nss_status
-_nss_http_setspent_locked(int stayopen)
+// Called to open the shadow file
+enum nss_status _nss_http_setspent(int stayopen)
 {
     DEBUG_LOG;
 
@@ -118,21 +115,8 @@ _nss_http_setspent_locked(int stayopen)
     return NSS_STATUS_SUCCESS;
 }
 
-// Called to open the shadow file
-enum nss_status
-_nss_http_setspent(int stayopen)
-{
-    DEBUG_LOG;
-
-    enum nss_status ret;
-    pthread_mutex_lock(&mutex);
-    ret = _nss_http_setspent_locked(stayopen);
-    pthread_mutex_unlock(&mutex);
-    return ret;
-}
-
-enum nss_status
-_nss_http_endspent_locked(void)
+// Called to close the shadow file
+enum nss_status _nss_http_endspent(void)
 {
     DEBUG_LOG;
 
@@ -145,28 +129,15 @@ _nss_http_endspent_locked(void)
     return NSS_STATUS_SUCCESS;
 }
 
-// Called to close the shadow file
-enum nss_status
-_nss_http_endspent(void)
-{
-    DEBUG_LOG;
-
-    enum nss_status ret;
-    pthread_mutex_lock(&mutex);
-    ret = _nss_http_endspent_locked();
-    pthread_mutex_unlock(&mutex);
-    return ret;
-}
-
-enum nss_status
-_nss_http_getspent_r_locked(struct spwd *result, char *buffer, size_t buflen, int *errnop)
+// Called to look up next entry in shadow file
+enum nss_status _nss_http_getspent_r(struct spwd *result, char *buffer, size_t buflen, int *errnop)
 {
     DEBUG_LOG;
 
     enum nss_status ret = NSS_STATUS_SUCCESS;
 
     if (ent_json_root == NULL) {
-        ret = _nss_http_setspent_locked(0);
+        ret = _nss_http_setspent(0);
     }
 
     if (ret != NSS_STATUS_SUCCESS) return ret;
@@ -195,21 +166,8 @@ _nss_http_getspent_r_locked(struct spwd *result, char *buffer, size_t buflen, in
     return NSS_STATUS_SUCCESS;
 }
 
-// Called to look up next entry in shadow file
-enum nss_status
-_nss_http_getspent_r(struct spwd *result, char *buffer, size_t buflen, int *errnop)
-{
-    DEBUG_LOG;
-
-    enum nss_status ret;
-    pthread_mutex_lock(&mutex);
-    ret = _nss_http_getspent_r_locked(result, buffer, buflen, errnop);
-    pthread_mutex_unlock(&mutex);
-    return ret;
-}
-
-enum nss_status
-_nss_http_getspnam_r_locked(const char *name, struct spwd *result, char *buffer, size_t buflen, int *errnop)
+// Find a shadow by name
+enum nss_status _nss_http_getspnam_r(const char *name, struct spwd *result, char *buffer, size_t buflen, int *errnop)
 {
     DEBUG_LOG;
 
@@ -247,17 +205,4 @@ _nss_http_getspnam_r_locked(const char *name, struct spwd *result, char *buffer,
 
     json_object_put(json_root);
     return NSS_STATUS_SUCCESS;
-}
-
-// Find a shadow by name
-enum nss_status
-_nss_http_getspnam_r(const char *name, struct spwd *result, char *buffer, size_t buflen, int *errnop)
-{
-    DEBUG_LOG;
-
-    enum nss_status ret;
-    pthread_mutex_lock(&mutex);
-    ret = _nss_http_getspnam_r_locked(name, result, buffer, buflen, errnop);
-    pthread_mutex_unlock(&mutex);
-    return ret;
 }

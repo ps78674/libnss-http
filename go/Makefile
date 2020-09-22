@@ -1,6 +1,6 @@
 VERSION =$(shell cat VERSION | cut -d- -f1)
 LD_FLAGS='-s -w'
-CGO_CFLAGS='-g -O2'
+CGO_CFLAGS='-Wall -g -O2'
 
 LIBRARY=libnss_http.so.$(VERSION)
 
