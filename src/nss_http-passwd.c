@@ -2,7 +2,6 @@
 
 #include <stdio.h>
 #include <errno.h>
-#include <pthread.h>
 #include <nss.h>
 #include <pwd.h>
 #include <string.h>
@@ -11,14 +10,12 @@
 // #include <json-c/json.h>
 #include <json.h>
 
-static pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
 static json_object *ent_json_root = NULL;
 static int ent_json_idx = 0;
 
 // -1 Failed to parse
 // -2 Buffer too small
-static int
-pack_passwd_struct(json_object *root, struct passwd *result, char *buffer, size_t buflen)
+static int pack_passwd_struct(json_object *root, struct passwd *result, char *buffer, size_t buflen)
 {
     DEBUG_LOG;
 
@@ -97,8 +94,8 @@ pack_passwd_struct(json_object *root, struct passwd *result, char *buffer, size_
     return 0;
 }
 
-enum nss_status
-_nss_http_setpwent_locked(int stayopen)
+// Called to open the passwd file
+enum nss_status _nss_http_setpwent(int stayopen)
 {
     DEBUG_LOG;
 
@@ -127,21 +124,8 @@ _nss_http_setpwent_locked(int stayopen)
     return NSS_STATUS_SUCCESS;
 }
 
-// Called to open the passwd file
-enum nss_status
-_nss_http_setpwent(int stayopen)
-{
-    DEBUG_LOG;
-
-    enum nss_status ret;
-    pthread_mutex_lock(&mutex);
-    ret = _nss_http_setpwent_locked(stayopen);
-    pthread_mutex_unlock(&mutex);
-    return ret;
-}
-
-enum nss_status
-_nss_http_endpwent_locked(void)
+// Called to close the passwd file
+enum nss_status _nss_http_endpwent(void)
 {
     DEBUG_LOG;
 
@@ -154,28 +138,15 @@ _nss_http_endpwent_locked(void)
     return NSS_STATUS_SUCCESS;
 }
 
-// Called to close the passwd file
-enum nss_status
-_nss_http_endpwent(void)
-{
-    DEBUG_LOG;
-
-    enum nss_status ret;
-    pthread_mutex_lock(&mutex);
-    ret = _nss_http_endpwent_locked();
-    pthread_mutex_unlock(&mutex);
-    return ret;
-}
-
-enum nss_status
-_nss_http_getpwent_r_locked(struct passwd *result, char *buffer, size_t buflen, int *errnop)
+// Called to look up next entry in passwd file
+enum nss_status _nss_http_getpwent_r(struct passwd *result, char *buffer, size_t buflen, int *errnop)
 {
     DEBUG_LOG;
 
     enum nss_status ret = NSS_STATUS_SUCCESS;
 
     if (ent_json_root == NULL) {
-        ret = _nss_http_setpwent_locked(0);
+        ret = _nss_http_setpwent(0);
     }
 
     if (ret != NSS_STATUS_SUCCESS) return ret;
@@ -204,22 +175,8 @@ _nss_http_getpwent_r_locked(struct passwd *result, char *buffer, size_t buflen, 
     return NSS_STATUS_SUCCESS;
 }
 
-// Called to look up next entry in passwd file
-enum nss_status
-_nss_http_getpwent_r(struct passwd *result, char *buffer, size_t buflen, int *errnop)
-{
-    DEBUG_LOG;
-
-    enum nss_status ret;
-    pthread_mutex_lock(&mutex);
-    ret = _nss_http_getpwent_r_locked(result, buffer, buflen, errnop);
-    pthread_mutex_unlock(&mutex);
-    return ret;
-}
-
 // Find a passwd by uid
-enum nss_status
-_nss_http_getpwuid_r_locked(uid_t uid, struct passwd *result, char *buffer, size_t buflen, int *errnop)
+enum nss_status _nss_http_getpwuid_r(uid_t uid, struct passwd *result, char *buffer, size_t buflen, int *errnop)
 {
     DEBUG_LOG;
 
@@ -260,20 +217,8 @@ _nss_http_getpwuid_r_locked(uid_t uid, struct passwd *result, char *buffer, size
     return NSS_STATUS_SUCCESS;
 }
 
-enum nss_status
-_nss_http_getpwuid_r(uid_t uid, struct passwd *result, char *buffer, size_t buflen, int *errnop)
-{
-    DEBUG_LOG;
-
-    enum nss_status ret;
-    pthread_mutex_lock(&mutex);
-    ret = _nss_http_getpwuid_r_locked(uid, result, buffer, buflen, errnop);
-    pthread_mutex_unlock(&mutex);
-    return ret;
-}
-
-enum nss_status
-_nss_http_getpwnam_r_locked(const char *name, struct passwd *result, char *buffer, size_t buflen, int *errnop)
+// Find a passwd by name
+enum nss_status _nss_http_getpwnam_r(const char *name, struct passwd *result, char *buffer, size_t buflen, int *errnop)
 {
     DEBUG_LOG;
 
@@ -311,17 +256,4 @@ _nss_http_getpwnam_r_locked(const char *name, struct passwd *result, char *buffe
 
     json_object_put(json_root);
     return NSS_STATUS_SUCCESS;
-}
-
-// Find a passwd by name
-enum nss_status
-_nss_http_getpwnam_r(const char *name, struct passwd *result, char *buffer, size_t buflen, int *errnop)
-{
-    DEBUG_LOG;
-
-    enum nss_status ret;
-    pthread_mutex_lock(&mutex);
-    ret = _nss_http_getpwnam_r_locked(name, result, buffer, buflen, errnop);
-    pthread_mutex_unlock(&mutex);
-    return ret;
 }

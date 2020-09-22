@@ -2,7 +2,6 @@
 
 #include <stdio.h>
 #include <errno.h>
-#include <pthread.h>
 #include <nss.h>
 #include <grp.h>
 #include <string.h>
@@ -11,14 +10,12 @@
 // #include <json-c/json.h>
 #include <json.h>
 
-static pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
 static json_object *ent_json_root = NULL;
 static int ent_json_idx = 0;
 
 // -1 Failed to parse
 // -2 Buffer too small
-static int
-pack_group_struct(json_object *root, struct group *result, char *buffer, size_t buflen)
+static int pack_group_struct(json_object *root, struct group *result, char *buffer, size_t buflen)
 {
     DEBUG_LOG;
 
@@ -79,8 +76,8 @@ pack_group_struct(json_object *root, struct group *result, char *buffer, size_t 
     return 0;
 }
 
-enum nss_status
-_nss_http_setgrent_locked(int stayopen)
+// Called to open the group file
+enum nss_status _nss_http_setgrent(int stayopen)
 {
     DEBUG_LOG;
 
@@ -109,21 +106,8 @@ _nss_http_setgrent_locked(int stayopen)
     return NSS_STATUS_SUCCESS;
 }
 
-// Called to open the group file
-enum nss_status
-_nss_http_setgrent(int stayopen)
-{
-    DEBUG_LOG;
-
-    enum nss_status ret;
-    pthread_mutex_lock(&mutex);
-    ret = _nss_http_setgrent_locked(stayopen);
-    pthread_mutex_unlock(&mutex);
-    return ret;
-}
-
-enum nss_status
-_nss_http_endgrent_locked(void)
+// Called to close the group file
+enum nss_status _nss_http_endgrent(void)
 {
     DEBUG_LOG;
 
@@ -136,28 +120,15 @@ _nss_http_endgrent_locked(void)
     return NSS_STATUS_SUCCESS;
 }
 
-// Called to close the group file
-enum nss_status
-_nss_http_endgrent(void)
-{
-    DEBUG_LOG;
-
-    enum nss_status ret;
-    pthread_mutex_lock(&mutex);
-    ret = _nss_http_endgrent_locked();
-    pthread_mutex_unlock(&mutex);
-    return ret;
-}
-
-enum nss_status
-_nss_http_getgrent_r_locked(struct group *result, char *buffer, size_t buflen, int *errnop)
+// Called to look up next entry in group file
+enum nss_status _nss_http_getgrent_r(struct group *result, char *buffer, size_t buflen, int *errnop)
 {
     DEBUG_LOG;
 
     enum nss_status ret = NSS_STATUS_SUCCESS;
 
     if (ent_json_root == NULL) {
-        ret = _nss_http_setgrent_locked(0);
+        ret = _nss_http_setgrent(0);
     }
 
     if (ret != NSS_STATUS_SUCCESS) return ret;
@@ -186,22 +157,8 @@ _nss_http_getgrent_r_locked(struct group *result, char *buffer, size_t buflen, i
     return NSS_STATUS_SUCCESS;
 }
 
-// Called to look up next entry in group file
-enum nss_status
-_nss_http_getgrent_r(struct group *result, char *buffer, size_t buflen, int *errnop)
-{
-    DEBUG_LOG;
-
-    enum nss_status ret;
-    pthread_mutex_lock(&mutex);
-    ret = _nss_http_getgrent_r_locked(result, buffer, buflen, errnop);
-    pthread_mutex_unlock(&mutex);
-    return ret;
-}
-
 // Find a group by gid
-enum nss_status
-_nss_http_getgrgid_r_locked(gid_t gid, struct group *result, char *buffer, size_t buflen, int *errnop)
+enum nss_status _nss_http_getgrgid_r(gid_t gid, struct group *result, char *buffer, size_t buflen, int *errnop)
 {
     DEBUG_LOG;
 
@@ -242,20 +199,8 @@ _nss_http_getgrgid_r_locked(gid_t gid, struct group *result, char *buffer, size_
     return NSS_STATUS_SUCCESS;
 }
 
-enum nss_status
-_nss_http_getgrgid_r(gid_t gid, struct group *result, char *buffer, size_t buflen, int *errnop)
-{
-    DEBUG_LOG;
-
-    enum nss_status ret;
-    pthread_mutex_lock(&mutex);
-    ret = _nss_http_getgrgid_r_locked(gid, result, buffer, buflen, errnop);
-    pthread_mutex_unlock(&mutex);
-    return ret;
-}
-
-enum nss_status
-_nss_http_getgrnam_r_locked(const char *name, struct group *result, char *buffer, size_t buflen, int *errnop)
+// Find a group by name
+enum nss_status _nss_http_getgrnam_r(const char *name, struct group *result, char *buffer, size_t buflen, int *errnop)
 {
     DEBUG_LOG;
 
@@ -294,17 +239,4 @@ _nss_http_getgrnam_r_locked(const char *name, struct group *result, char *buffer
 
     json_object_put(json_root);
     return NSS_STATUS_SUCCESS;
-}
-
-// Find a group by name
-enum nss_status
-_nss_http_getgrnam_r(const char *name, struct group *result, char *buffer, size_t buflen, int *errnop)
-{
-    DEBUG_LOG;
-
-    enum nss_status ret;
-    pthread_mutex_lock(&mutex);
-    ret = _nss_http_getgrnam_r_locked(name, result, buffer, buflen, errnop);
-    pthread_mutex_unlock(&mutex);
-    return ret;
 }
