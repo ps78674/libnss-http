@@ -53,13 +53,13 @@ pack_passwd_struct(json_object *root, struct passwd *result, char *buffer, size_
 
     memset(buffer, '\0', buflen);
 
-    if ((int)bufleft <= json_object_get_string_len(j_pw_name)) || 
+    if (((int)bufleft <= json_object_get_string_len(j_pw_name)) || 
        (snprintf(next_buf, bufleft, "%s", json_object_get_string(j_pw_name)) <= 0)) return -2;
     result->pw_name = next_buf;
     next_buf += strlen(result->pw_name) + 1;
     bufleft  -= strlen(result->pw_name) + 1;
 
-    if ((int)bufleft <= json_object_get_string_len(j_pw_passwd)) ||
+    if (((int)bufleft <= json_object_get_string_len(j_pw_passwd)) ||
        (snprintf(next_buf, bufleft, "%s", json_object_get_string(j_pw_passwd)) <= 0)) return -2;
     result->pw_passwd = next_buf;
     next_buf += strlen(result->pw_passwd) + 1;
@@ -70,25 +70,25 @@ pack_passwd_struct(json_object *root, struct passwd *result, char *buffer, size_
 
     if (json_object_get_type(j_pw_gecos) == json_type_null)
     {
-        if (int)bufleft <= 1) return -2;
+        if ((int)bufleft <= 1) return -2;
         result->pw_gecos = "\0";
         next_buf += 1;
         bufleft -= 1;
     } else {
-        if ((int)bufleft <= json_object_get_string_len(j_pw_gecos)) ||
+        if (((int)bufleft <= json_object_get_string_len(j_pw_gecos)) ||
            (snprintf(next_buf, bufleft, "%s", json_object_get_string(j_pw_gecos)) <= 0)) return -2;
         result->pw_gecos = next_buf;
         next_buf += strlen(result->pw_gecos) + 1;
         bufleft  -= strlen(result->pw_gecos) + 1;
     }
 
-    if ((int)bufleft <= json_object_get_string_len(j_pw_dir)) ||
+    if (((int)bufleft <= json_object_get_string_len(j_pw_dir)) ||
        (snprintf(next_buf, bufleft, "%s", json_object_get_string(j_pw_dir)) <= 0)) return -2;
     result->pw_dir = next_buf;
     next_buf += strlen(result->pw_dir) + 1;
     bufleft  -= strlen(result->pw_dir) + 1;
 
-    if ((int)bufleft <= json_object_get_string_len(j_pw_shell)) ||
+    if (((int)bufleft <= json_object_get_string_len(j_pw_shell)) ||
        (snprintf(next_buf, bufleft, "%s", json_object_get_string(j_pw_shell)) <= 0)) return -2;
     result->pw_shell = next_buf;
     next_buf += strlen(result->pw_shell) + 1;

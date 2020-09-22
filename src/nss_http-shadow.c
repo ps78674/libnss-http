@@ -59,13 +59,13 @@ pack_shadow_struct(json_object *root, struct spwd *result, char *buffer, size_t 
 
     memset(buffer, '\0', buflen);
 
-    if ((int)bufleft <= json_object_get_string_len(j_sp_namp)) ||
+    if (((int)bufleft <= json_object_get_string_len(j_sp_namp)) ||
        (snprintf(next_buf, bufleft, "%s", json_object_get_string(j_sp_namp)) <= 0)) return -2;
     result->sp_namp = next_buf;
     next_buf += strlen(result->sp_namp) + 1;
     bufleft  -= strlen(result->sp_namp) + 1;
 
-    if ((int)bufleft <= json_object_get_string_len(j_sp_pwdp)) ||
+    if (((int)bufleft <= json_object_get_string_len(j_sp_pwdp)) ||
        (snprintf(next_buf, bufleft, "%s", json_object_get_string(j_sp_pwdp)) <= 0)) return -2;
     result->sp_pwdp = next_buf;
     next_buf += strlen(result->sp_pwdp) + 1;

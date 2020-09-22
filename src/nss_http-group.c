@@ -45,13 +45,13 @@ pack_group_struct(json_object *root, struct group *result, char *buffer, size_t 
 
     memset(buffer, '\0', buflen);
 
-    if ((int)bufleft <= json_object_get_string_len(j_gr_name)) ||
+    if (((int)bufleft <= json_object_get_string_len(j_gr_name)) ||
        (snprintf(next_buf, bufleft, "%s", json_object_get_string(j_gr_name)) <= 0)) return -2;
     result->gr_name = next_buf;
     next_buf += strlen(result->gr_name) + 1;
     bufleft  -= strlen(result->gr_name) + 1;
 
-    if ((int)bufleft <= json_object_get_string_len(j_gr_passwd)) || 
+    if (((int)bufleft <= json_object_get_string_len(j_gr_passwd)) || 
        (snprintf(next_buf, bufleft, "%s", json_object_get_string(j_gr_passwd)) <= 0)) return -2;
     result->gr_passwd = next_buf;
     next_buf += strlen(result->gr_passwd) + 1;
@@ -69,7 +69,7 @@ pack_group_struct(json_object *root, struct group *result, char *buffer, size_t 
         j_member = json_object_array_get_idx(j_gr_mem, i);
         if (json_object_get_type(j_member) != json_type_string) return -1;
 
-        if ((int)bufleft < json_object_get_string_len(j_member)) || 
+        if (((int)bufleft < json_object_get_string_len(j_member)) || 
            (snprintf(next_buf, bufleft, "%s", json_object_get_string(j_member)) <= 0)) return -2;
         result->gr_mem[i] = next_buf;
         next_buf += strlen(result->gr_mem[i]) + 1;
