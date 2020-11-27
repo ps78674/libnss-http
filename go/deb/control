@@ -1,8 +1,0 @@
-Package: libnss-http
-Version: <PKG_VER>
-Section: base
-Priority: optional
-Architecture: amd64
-Maintainer: <user@email.org>
-Description:
-    NSS plugin that uses an HTTP server as a backend
