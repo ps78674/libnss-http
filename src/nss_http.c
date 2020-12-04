@@ -20,10 +20,10 @@ struct MemoryStruct {
 
 struct config conf;
 
-void debug_print(const char *func)
+void debug_func_name(const char *func)
 {
     if (strcmp("true", conf.debug) == 0)
-        fprintf(stderr, "NSS DEBUG: Called %s \n", func);
+        fprintf(stderr, "NSS-HTTP: called function %s \n", func);
 }
 
 void readconfig(struct config *configstruct)
@@ -31,7 +31,7 @@ void readconfig(struct config *configstruct)
     FILE *f;
     if ((f = fopen (CONFIG_FILE, "r")) == NULL)
     {
-        fprintf(stderr, "error opening '%s'\n", CONFIG_FILE);
+        fprintf(stderr, "NSS-HTTP: error opening configuration file '%s'\n", CONFIG_FILE);
         exit(1);
     }
 
@@ -90,7 +90,7 @@ static size_t write_response(void *ptr, size_t size, size_t nmemb, void *stream)
         mem->data = realloc(mem->data, mem->size + realsize + 1);
         if (mem->data == NULL) {
             // out of memory
-            fprintf(stderr, "not enough memory (realloc returned NULL)\n");
+            fprintf(stderr, "NSS-HTTP: not enough memory (realloc returned NULL)\n");
             return 0;
         }
     } else {
@@ -124,17 +124,18 @@ char *nss_http_request(const char *url)
     curl_easy_setopt(curl, CURLOPT_URL, url);
     curl_easy_setopt(curl, CURLOPT_SSL_VERIFYPEER, 0);
     curl_easy_setopt(curl, CURLOPT_HTTPHEADER, headers);
+    curl_easy_setopt(curl, CURLOPT_TIMEOUT, conf.timeout);
     curl_easy_setopt(curl, CURLOPT_CONNECTTIMEOUT, conf.timeout);
     curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, write_response);
     curl_easy_setopt(curl, CURLOPT_WRITEDATA, &chunk);
 
     result = curl_easy_perform(curl);
     if(result != CURLE_OK) {
-        fprintf(stderr, "curl_easy_perform() failed: %s\n", curl_easy_strerror(result));
+        fprintf(stderr, "NSS-HTTP: curl_easy_perform() failed: %s\n", curl_easy_strerror(result));
     } else {
         result = curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &code);
         if ((result != CURLE_OK) && (code != 200)) {
-            fprintf(stderr, "curl_easy_getinfo() failed: result: %s, return code: %ld\n", curl_easy_strerror(result), code);
+            fprintf(stderr, "NSS-HTTP: curl_easy_getinfo() failed: result: %s, return code: %ld\n", curl_easy_strerror(result), code);
         };
     };
 
