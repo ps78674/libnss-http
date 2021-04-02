@@ -20,12 +20,6 @@ struct MemoryStruct {
 
 struct config conf;
 
-void debug_func_name(const char *func)
-{
-    if (strcmp("true", conf.debug) == 0)
-        fprintf(stderr, "NSS-HTTP: called function %s \n", func);
-}
-
 void readconfig(struct config *configstruct)
 {
     FILE *f;
@@ -53,6 +47,15 @@ void readconfig(struct config *configstruct)
     fclose(f);
 }
 
+void debug_func_name(const char *func)
+{
+    memset(&conf, '\0', sizeof(conf));
+    readconfig(&conf);
+
+    if (strcmp("true", conf.debug) == 0)
+        fprintf(stderr, "NSS-HTTP: called function %s \n", func);
+}
+
 void getmyhostname(char *hostname)
 {
     gethostname(hostname, MAX_HOSTNAME_LEN);
@@ -68,6 +71,9 @@ void getmyhostname(char *hostname)
 
 void genurl(char* url, const char *type, const char *key)
 {
+    memset(&conf, '\0', sizeof(conf));
+    readconfig(&conf);
+
     char hostname[MAX_HOSTNAME_LEN];
     getmyhostname(hostname);
 
@@ -110,6 +116,9 @@ char *nss_http_request(const char *url)
 {
     DEBUG_LOG;
 
+    memset(&conf, '\0', sizeof(conf));
+    readconfig(&conf);
+
     CURL *curl = NULL;
     CURLcode result;
 
@@ -144,10 +153,4 @@ char *nss_http_request(const char *url)
     curl_global_cleanup();
 
     return chunk.data;
-}
-
-__attribute__ ((constructor)) void _nss_init()
-{
-    memset(&conf, '\0', sizeof(conf));
-    readconfig(&conf);
 }
